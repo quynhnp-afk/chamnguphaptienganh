@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng Luyện Phát Âm Tiếng Anh Lớp 11</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        h3 {
+            text-align: center;
+            color: #7f8c8d;
+            font-weight: normal;
+            margin-top: 0;
+        }
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-primary { background-color: #3498db; color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-success { background-color: #2ecc71; color: white; }
+        .btn-success:hover { background-color: #27ae60; }
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .btn-danger:hover { background-color: #c0392b; }
+        
+        .sentence-box {
+            background: #edf2f7;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 60px;
+            font-size: 20px;
+            line-height: 1.5;
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        .edit-area {
+            width: 100%;
+            height: 60px;
+            font-size: 18px;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: 1px solid #cbd5e0;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .action-zone {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .btn-action {
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 30px;
+        }
+        .result-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .pass { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .fail { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        .list-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+        .sentence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 15px;
+        }
+        .sentence-item.active {
+            background-color: #e3f2fd;
+            font-weight: bold;
+        }
+        .sentence-text {
+            flex-grow: 1;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Pronunciation Practice App</h1>
+    <h3>Ứng dụng luyện phát âm Tiếng Anh lớp 11</h3>
+
+    <div class="controls-top">
+        <div>
+            <button class="btn btn-primary" onclick="changeSentence(-1)">◀ Câu trước</button>
+            <button class="btn btn-primary" onclick="changeSentence(1)">Câu sau ▶</button>
+        </div>
+        <div>
+            <button class="btn btn-primary" id="btn-edit" onclick="toggleEdit()">Chỉnh sửa câu này</button>
+            <button class="btn btn-success" id="btn-save" onclick="saveEdit()" style="display:none;">Lưu</button>
+        </div>
+    </div>
+
+    <div id="sentence-display" class="sentence-box">Đang tải dữ liệu...</div>
+    <textarea id="sentence-input" class="edit-area"></textarea>
+
+    <div class="action-zone">
+        <button class="btn btn-primary btn-action" id="btn-play-audio" onclick="playCustomAudio()">🔊 Nghe File Mẫu</button>
+        <button class="btn btn-danger btn-action" id="btn-speak" onclick="startRecognition()">🎤 Học sinh nói</button>
+    </div>
+
+    <audio id="custom-audio-player"></audio>
+
+    <div id="result" class="result-box"></div>
+    <div id="student-transcript" style="text-align: center; font-style: italic; color: #555; margin-bottom: 20px;"></div>
+
+    <div class="list-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4>Danh sách câu ví dụ:</h4>
+            <button class="btn btn-success" onclick="addNewSentence()">+ Thêm câu mới</button>
+        </div>
+        <div id="sentence-list"></div>
+    </div>
+</div>
+
+<script>
+    // 8 câu ví dụ mặc định tương ứng với 8 file nghe
+    let data = [
+        { text: "Bullying makes students feel scared. Moreover, it makes them hate going to school.", audio: "audio1.mp3" },
+        { text: "In addition to peer pressure, many teens also struggle with body shaming.", audio: "audio2.mp3" },
+        { text: "Our school started a new campaign. However, many students do not know about it.", audio: "audio3.mp3" },
+        { text: "Despite the new campaign, bullying is still a big problem in schools.", audio: "audio4.mp3" },
+        { text: "Many students feel stressed because of peer pressure.", audio: "audio5.mp3" },
+        { text: "Since overpopulation causes many problems, we need to raise people's awareness.", audio: "audio6.mp3" },
+        { text: "Body shaming hurts people’s feelings. Therefore, we should stop doing it.", audio: "audio7.mp3" },
+        { text: "The city faces overpopulation. As a consequence, the traffic is very bad.", audio: "audio8.mp3" }
+    ];
+
+    let currentIndex = 0;
+
+    // Cấu hình Nhận diện giọng nói
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US'; 
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = function(event) {
+            let transcript = event.results[0][0].transcript;
+            document.getElementById('student-transcript').innerHTML = `Bạn đã nói: "<strong>${transcript}</strong>"`;
+            evaluatePronunciation(transcript);
+        };
+
+        recognition.onerror = function(event) {
+            if(event.error === 'not-allowed') {
+                alert('LỖI: Trình duyệt chưa được cấp quyền sử dụng Microphone. Hãy bấm vào biểu tượng ổ khóa ở thanh địa chỉ web để bật Micro.');
+            }
+            resetSpeakButton();
+        };
+
+        recognition.onend = function() {
+            resetSpeakButton();
+        };
+    }
+
+    function init() {
+        renderCurrentSentence();
+        renderSentenceList();
+    }
+
+    function renderCurrentSentence() {
+        if(data.length === 0) {
+            document.getElementById('sentence-display').innerText = "(Danh sách trống)";
+            return;
+        }
+        document.getElementById('sentence-display').innerText = `Câu ${currentIndex + 1}: ${data[currentIndex].text}`;
+        document.getElementById('sentence-input').value = data[currentIndex].text;
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('student-transcript').innerText = '';
+        
+        // Cập nhật nguồn file audio cho thẻ phát nhạc
+        let audioPlayer = document.getElementById('custom-audio-player');
+        audioPlayer.src = data[currentIndex].audio;
+        audioPlayer.load();
+
+        let items = document.querySelectorAll('.sentence-item');
+        items.forEach((item, index) => {
+            if(index === currentIndex) item.classList.add('active');
+            else item.classList.remove('active');
+        });
+    }
+
+    function renderSentenceList() {
+        const listContainer = document.getElementById('sentence-list');
+        listContainer.innerHTML = '';
+        data.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = `sentence-item ${index === currentIndex ? 'active' : ''}`;
+            div.innerHTML = `
+                <span class="sentence-text" onclick="selectSentence(${index})"><strong>${index + 1}.</strong> ${item.text} <small style="color: #7f8c8d;">(${item.audio})</small></span>
+                <button class="btn btn-danger" style="padding: 2px 8px; font-size:12px;" onclick="deleteSentence(${index}, event)">Xóa</button>
+            `;
+            listContainer.appendChild(div);
+        });
+    }
+
+    // HÀM MỚI: Phát file ghi âm có sẵn của bạn
+    function playCustomAudio() {
+        if(data.length === 0) return;
+        let audioPlayer = document.getElementById('custom-audio-player');
+        
+        // Dừng âm thanh cũ (nếu có) trước khi phát lại
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        
+        // Tiến hành phát file .mp3 tương ứng
+        audioPlayer.play().catch(function(error) {
+            alert("Không tìm thấy hoặc không thể phát file âm thanh: " + data[currentIndex].audio + "\nHãy đảm bảo bạn đã upload file âm thanh này lên cùng thư mục với file index.html trên GitHub.");
+        });
+    }
+
+    // Thu âm học sinh nói
+    function startRecognition() {
+        if(!recognition) {
+            alert("Trình duyệt không hỗ trợ Web Speech API.");
+            return;
+        }
+        // Tắt file âm thanh mẫu nếu đang chạy giải phóng luồng tai nghe
+        document.getElementById('custom-audio-player').pause();
+        
+        document.getElementById('btn-speak').innerText = "🔴 Đang lắng nghe... Hãy nói đi";
+        document.getElementById('btn-speak').style.backgroundColor = "#7f8c8d";
+        
+        try {
+            recognition.start();
+        } catch(e) {
+            recognition.stop();
+            setTimeout(() => { recognition.start(); }, 300);
+        }
+    }
+
+    function resetSpeakButton() {
+        document.getElementById('btn-speak').innerText = "🎤 Học sinh nói";
+        document.getElementById('btn-speak').style.backgroundColor = "#e74c3c";
+    }
+
+    // Chấm điểm phát âm dựa trên text
+    function evaluatePronunciation(studentSpeech) {
+        let original = data[currentIndex].text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase().trim();
+        let student = studentSpeech.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").toLowerCase().trim();
+        
+        let distance = levenshteinDistance(original, student);
+        let maxLength = Math.max(original.length, student.length);
+        let accuracy = maxLength === 0 ? 100 : Math.round(((maxLength - distance) / maxLength) * 100);
+
+        let resultBox = document.getElementById('result');
+        resultBox.style.display = 'block';
+
+        if (accuracy >= 60) {
+            resultBox.className = "result-box pass";
+            resultBox.innerHTML = `🎉 <strong>Chính xác: ${accuracy}%</strong> - ĐẠT! Chuẩn bị chuyển câu sau.`;
+            
+            setTimeout(() => {
+                if (currentIndex < data.length - 1) {
+                    changeSentence(1);
+                } else {
+                    resultBox.innerHTML += "<br><b>Chúc mừng! Bạn đã hoàn thành câu cuối cùng!</b>";
+                }
+            }, 2500);
+        } else {
+            resultBox.className = "result-box fail";
+            resultBox.innerHTML = `❌ <strong>Chính xác: ${accuracy}%</strong> - CHƯA ĐẠT (Cần trên 60%). Hãy thử lại hoặc bấm máy nói mẫu.`;
+        }
+    }
+
+    function levenshteinDistance(a, b) {
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                }
+            }
+        }
+        return matrix[b.length][a.length];
+    }
+
+    function changeSentence(step) {
+        currentIndex += step;
+        if (currentIndex >= data.length) currentIndex = 0;
+        if (currentIndex < 0) currentIndex = data.length - 1;
+        renderCurrentSentence();
+    }
+
+    function selectSentence(index) {
+        currentIndex = index;
+        renderCurrentSentence();
+    }
+
+    function toggleEdit() {
+        let display = document.getElementById('sentence-display');
+        let input = document.getElementById('sentence-input');
+        let btnEdit = document.getElementById('btn-edit');
+        let btnSave = document.getElementById('btn-save');
+
+        if(input.style.display === 'none' || input.style.display === '') {
+            display.style.display = 'none';
+            input.style.display = 'block';
+            btnEdit.innerText = "Hủy bỏ";
+            btnSave.style.display = 'inline-block';
+            input.focus();
+        } else {
+            display.style.display = 'block';
+            input.style.display = 'none';
+            btnEdit.innerText = "Chỉnh sửa câu này";
+            btnSave.style.display = 'none';
+        }
+    }
+
+    function saveEdit() {
+        let newVal = document.getElementById('sentence-input').value.trim();
+        if(newVal !== "") {
+            data[currentIndex].text = newVal;
+            toggleEdit();
+            renderCurrentSentence();
+            renderSentenceList();
+        }
+    }
+
+    function addNewSentence() {
+        let text = prompt("Nhập câu Tiếng Anh mới bạn muốn thêm:");
+        if (text && text.trim() !== "") {
+            let fileAudioName = prompt("Nhập tên file âm thanh cho câu này (Ví dụ: tu_tao_them.mp3):", "audio" + (data.length + 1) + ".mp3");
+            data.push({ text: text.trim(), audio: fileAudioName });
+            currentIndex = data.length - 1; 
+            renderCurrentSentence();
+            renderSentenceList();
+        }
+    }
+
+    function deleteSentence(index, event) {
+        event.stopPropagation(); 
+        if(confirm("Bạn có chắc chắn muốn xóa câu này?")) {
+            data.splice(index, 1);
+            if(currentIndex >= data.length && currentIndex > 0) {
+                currentIndex--;
+            }
+            renderCurrentSentence();
+            renderSentenceList();
+        }
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
